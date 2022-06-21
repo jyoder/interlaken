@@ -16,6 +16,7 @@ let
   devTools = with pkgs; [
     cabal-install 
     haskellPackages.ghcid
+    haskellPackages.haskell-language-server
   ];
 
   shellHook = ''
