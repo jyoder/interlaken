@@ -1,11 +1,12 @@
 {
-    "haskell.formattingProvider": "fourmolu",
-    "editor.tabSize": 2,
-    "editor.formatOnSave": true,
-    "files.autoSave": "afterDelay",
-    "[javascript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "prettier.printWidth": 100,
-    "prettier.tabWidth": 2,
+  "haskell.formattingProvider": "fourmolu",
+  "editor.tabSize": 2,
+  "editor.formatOnSave": true,
+  "files.autoSave": "afterDelay",
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "prettier.printWidth": 100,
+  "prettier.tabWidth": 2,
+  "nixEnvSelector.nixFile": "${workspaceRoot}/shell.nix"
 }
