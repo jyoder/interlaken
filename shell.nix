@@ -14,7 +14,7 @@ let
   });
   
   devTools = with pkgs; [
-    cabal-install 
+    cabal-install
     haskellPackages.ghcid
     haskellPackages.haskell-language-server
   ];
