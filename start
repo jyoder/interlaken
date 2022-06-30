@@ -1,0 +1,1 @@
+ghcid --test=mainDevelopment --restart=app --restart=static
