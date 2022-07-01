@@ -26,8 +26,11 @@ extra-source-files:
 executable interlaken
   main-is:            Main.hs
   other-modules:
+    Database
+    Development
     Layout
     Login
+    Route
     Types
 
   default-extensions:

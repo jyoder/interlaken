@@ -1,6 +1,7 @@
 module Main where
 
-import Database.SQLite.Simple (open)
+import Database (openConnection)
+import Development (withHotReload)
 import qualified Layout
 import qualified Login
 import Network.Wai (Application)
@@ -10,7 +11,6 @@ import Network.Wai.Handler.Warp (
   runSettings,
   setPort,
  )
-import Network.Wai.Handler.WebSockets (websocketsOr)
 import Network.Wai.Middleware.Gzip (
   GzipFiles (GzipCompress),
   GzipSettings (gzipFiles),
@@ -18,59 +18,35 @@ import Network.Wai.Middleware.Gzip (
   gzip,
  )
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
-import Network.WebSockets (
-  Connection,
-  ServerApp,
-  acceptRequest,
-  defaultConnectionOptions,
-  receiveData,
-  withPingThread,
- )
 import Protolude
+import qualified Route
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Types (
   AppContext (..),
-  Environment (Development, Production),
+  Environment (..),
  )
-import qualified Web.Scotty as Scotty
+import Web.Scotty (middleware, scottyApp)
 
 main :: IO ()
 main = do
-  dbConnection <- open "db/data/database.sqlite3"
+  dbConnection <- openConnection
   let appContext = AppContext{environment = Production, ..}
-  webApp appContext >>= runSettings warpSettings
+  webApp appContext >>= runSettings settings
 
 mainDevelopment :: IO ()
 mainDevelopment = do
-  dbConnection <- open "db/data/database.sqlite3"
+  dbConnection <- openConnection
   let appContext = AppContext{environment = Development, ..}
-  webApp appContext
-    >>= runSettings warpSettings . withHotReload
+  webApp appContext >>= runSettings settings . withHotReload
 
 webApp :: AppContext -> IO Application
-webApp appContext@(AppContext{..}) =
+webApp appContext =
   staticPolicy (addBase "static/")
-    `fmap` Scotty.scottyApp
+    `fmap` scottyApp
       ( do
-          Scotty.middleware $ gzip $ def{gzipFiles = GzipCompress}
-          Scotty.get "/" $ Scotty.redirect Login.newPath
-          Scotty.get Login.newPath $ Login.new appContext
-          Scotty.post Login.path $ Login.create appContext
-          Scotty.get "hot_reload" $ Scotty.html $ renderHtml $ Layout.render environment ""
+          middleware $ gzip $ def{gzipFiles = GzipCompress}
+          Route.routes appContext
       )
 
-warpSettings :: Settings
-warpSettings = setPort 3000 defaultSettings
-
-withHotReload :: Application -> Application
-withHotReload = websocketsOr defaultConnectionOptions hotReloadApp
-
-hotReloadApp :: ServerApp
-hotReloadApp pending = do
-  connection <- acceptRequest pending
-  withPingThread connection 30 (pure ()) $ receive connection
-
-receive :: Connection -> IO ()
-receive connection = do
-  (_ :: Text) <- receiveData connection
-  pure ()
+settings :: Settings
+settings = setPort 3000 defaultSettings

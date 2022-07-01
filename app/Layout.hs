@@ -4,7 +4,7 @@ import Protolude
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import Types
+import Types (Environment (..))
 
 render :: Environment -> H.Html -> H.Html
 render environment pageContent = H.docTypeHtml $ do
