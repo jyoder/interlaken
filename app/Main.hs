@@ -1,56 +1,76 @@
 module Main where
 
-import qualified Database.SQLite.Simple as SQLite
-import Layout
+import Database.SQLite.Simple (open)
+import qualified Layout
 import qualified Login
-import qualified Network.Wai as Wai
-import qualified Network.Wai.Handler.Warp as Handler.Warp
-import qualified Network.Wai.Handler.WebSockets as Handler.WebSockets
-import qualified Network.Wai.Middleware.Gzip as Gzip
-import qualified Network.Wai.Middleware.Static as Static
-import qualified Network.WebSockets as WebSockets
+import Network.Wai (Application)
+import Network.Wai.Handler.Warp (
+  Settings,
+  defaultSettings,
+  runSettings,
+  setPort,
+ )
+import Network.Wai.Handler.WebSockets (websocketsOr)
+import Network.Wai.Middleware.Gzip (
+  GzipFiles (GzipCompress),
+  GzipSettings (gzipFiles),
+  def,
+  gzip,
+ )
+import Network.Wai.Middleware.Static (addBase, staticPolicy)
+import Network.WebSockets (
+  Connection,
+  ServerApp,
+  acceptRequest,
+  defaultConnectionOptions,
+  receiveData,
+  withPingThread,
+ )
 import Protolude
-import qualified Text.Blaze.Html.Renderer.Text as Renderer.Text
-import Types
+import Text.Blaze.Html.Renderer.Text (renderHtml)
+import Types (
+  AppContext (..),
+  Environment (Development, Production),
+ )
 import qualified Web.Scotty as Scotty
 
 main :: IO ()
 main = do
-  dbConnection <- SQLite.open "db/data/database.sqlite3"
+  dbConnection <- open "db/data/database.sqlite3"
   let appContext = AppContext{environment = Production, ..}
-  webApp appContext >>= Handler.Warp.runSettings warpSettings
+  webApp appContext >>= runSettings warpSettings
 
 mainDevelopment :: IO ()
 mainDevelopment = do
-  dbConnection <- SQLite.open "db/data/database.sqlite3"
+  dbConnection <- open "db/data/database.sqlite3"
   let appContext = AppContext{environment = Development, ..}
   webApp appContext
-    >>= Handler.Warp.runSettings warpSettings . withHotReload
+    >>= runSettings warpSettings . withHotReload
 
-webApp :: AppContext -> IO Wai.Application
+webApp :: AppContext -> IO Application
 webApp appContext@(AppContext{..}) =
-  Static.staticPolicy (Static.addBase "static/")
+  staticPolicy (addBase "static/")
     `fmap` Scotty.scottyApp
       ( do
-          Scotty.middleware $ Gzip.gzip $ Gzip.def{Gzip.gzipFiles = Gzip.GzipCompress}
+          Scotty.middleware $ gzip $ def{gzipFiles = GzipCompress}
           Scotty.get "/" $ Scotty.redirect Login.newPath
           Scotty.get Login.newPath $ Login.new appContext
           Scotty.post Login.path $ Login.create appContext
-          Scotty.get "hot_reload" $ Scotty.html $ Renderer.Text.renderHtml $ Layout.render environment ""
+          Scotty.get "hot_reload" $ Scotty.html $ renderHtml $ Layout.render environment ""
       )
 
-warpSettings :: Handler.Warp.Settings
-warpSettings = Handler.Warp.setPort 3000 Handler.Warp.defaultSettings
+warpSettings :: Settings
+warpSettings = setPort 3000 defaultSettings
 
-withHotReload :: Wai.Application -> Wai.Application
-withHotReload = Handler.WebSockets.websocketsOr WebSockets.defaultConnectionOptions hotReloadApp
+withHotReload :: Application -> Application
+withHotReload = websocketsOr defaultConnectionOptions hotReloadApp
 
-hotReloadApp :: WebSockets.ServerApp
+hotReloadApp :: ServerApp
 hotReloadApp pending = do
-  connection <- WebSockets.acceptRequest pending
-  WebSockets.withPingThread connection 30 (pure ()) $ receive connection
+  connection <- acceptRequest pending
+  withPingThread connection 30 (pure ()) $ receive connection
 
-receive :: WebSockets.Connection -> IO ()
+receive :: Connection -> IO ()
 receive connection = do
-  (_ :: Text) <- WebSockets.receiveData connection
+  (_ :: Text) <- receiveData connection
   pure ()

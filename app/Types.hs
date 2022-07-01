@@ -3,11 +3,11 @@ module Types (
   AppContext (..),
 ) where
 
-import qualified Database.SQLite.Simple as SQLite
+import Database.SQLite.Simple (Connection)
 
 data AppContext = AppContext
   { environment :: Environment
-  , dbConnection :: SQLite.Connection
+  , dbConnection :: Connection
   }
 
 data Environment = Production | Development

@@ -1,15 +1,28 @@
 module Login where
 
-import qualified Database.SQLite.Simple as SQLite
+import Database.SQLite.Simple (
+  FromRow (..),
+  Only (Only),
+  Query (Query),
+  field,
+  query,
+ )
 import qualified Layout
 import Network.HTTP.Types (unauthorized401)
 import Protolude
-import qualified Text.Blaze.Html.Renderer.Text as Renderer.Text
+import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
 import qualified Text.Blaze.Html5.Attributes as A
-import Types
-import qualified Web.Scotty as Scotty
+import Types (AppContext (..), Environment)
+import Web.Scotty (
+  ActionM,
+  html,
+  liftAndCatchIO,
+  param,
+  redirect,
+  status,
+ )
 
 path :: IsString a => a
 path = "/logins"
@@ -17,19 +30,17 @@ path = "/logins"
 newPath :: IsString a => a
 newPath = "/logins/new"
 
-new :: AppContext -> Scotty.ActionM ()
+new :: AppContext -> ActionM ()
 new (AppContext{..}) =
-  Scotty.html $
-    Renderer.Text.renderHtml $
-      renderPage environment Page{errorMessage = Nothing}
+  html $ renderHtml $ renderPage environment Page{errorMessage = Nothing}
 
-create :: AppContext -> Scotty.ActionM ()
+create :: AppContext -> ActionM ()
 create (AppContext{..}) = do
-  email :: Text <- Scotty.param "email"
-  password :: Text <- Scotty.param "password"
+  email :: Text <- param "email"
+  password :: Text <- param "password"
 
-  passwords <- Scotty.liftAndCatchIO $ do
-    SQLite.query dbConnection (SQLite.Query "select users.hashed_password from users where users.email = ?") (SQLite.Only email) :: IO [PasswordRow]
+  passwords <- liftAndCatchIO $ do
+    query dbConnection (Query "select users.hashed_password from users where users.email = ?") (Only email) :: IO [PasswordRow]
 
   let loggedIn = case listToMaybe passwords of
         (Just (PasswordRow correctPassword)) -> password == correctPassword
@@ -41,17 +52,15 @@ create (AppContext{..}) = do
           else Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."
 
   if loggedIn
-    then Scotty.redirect "/dashboard"
-    else Scotty.status unauthorized401
+    then redirect "/dashboard"
+    else status unauthorized401
 
-  Scotty.html $
-    Renderer.Text.renderHtml $ do
-      renderPage environment Page{..}
+  html $ renderHtml $ renderPage environment Page{..}
 
 newtype PasswordRow = PasswordRow Text deriving (Show)
 
-instance SQLite.FromRow PasswordRow where
-  fromRow = PasswordRow <$> SQLite.field
+instance FromRow PasswordRow where
+  fromRow = PasswordRow <$> field
 
 newtype Page = Page {errorMessage :: Maybe Text}
 
