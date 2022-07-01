@@ -23,6 +23,7 @@ let
   ];
 
   shellHook = ''
+    export DATABASE_URL="sqlite3:db/data/database.sqlite3"
     alias repl="cabal new-repl"
   '';
 in

@@ -16,13 +16,13 @@ import qualified Web.Scotty as Scotty
 
 main :: IO ()
 main = do
-  dbConnection <- SQLite.open "db/data/development.sqlite3"
+  dbConnection <- SQLite.open "db/data/database.sqlite3"
   let appContext = AppContext{environment = Production, ..}
   webApp appContext >>= Handler.Warp.runSettings warpSettings
 
 mainDevelopment :: IO ()
 mainDevelopment = do
-  dbConnection <- SQLite.open "db/data/development.sqlite3"
+  dbConnection <- SQLite.open "db/data/database.sqlite3"
   let appContext = AppContext{environment = Development, ..}
   webApp appContext
     >>= Handler.Warp.runSettings warpSettings . withHotReload
