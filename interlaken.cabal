@@ -43,6 +43,8 @@ executable interlaken
     , base                   ^>=4.15.1.0
     , blaze-html
     , http-types
+    , password
+    , password-types
     , protolude
     , scotty
     , sqlite-simple

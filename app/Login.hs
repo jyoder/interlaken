@@ -1,6 +1,9 @@
 module Login where
 
+import Data.Password.Bcrypt (PasswordCheck (PasswordCheckFail, PasswordCheckSuccess), checkPassword)
+import Data.Password.Types
 import Database.SQLite.Simple (
+  Connection,
   FromRow (..),
   Only (Only),
   Query (Query),
@@ -39,28 +42,31 @@ create (AppContext{..}) = do
   email :: Text <- param "email"
   password :: Text <- param "password"
 
-  passwords <- liftAndCatchIO $ do
-    query dbConnection (Query "select users.hashed_password from users where users.email = ?") (Only email) :: IO [PasswordRow]
+  maybeHashedPassword <- liftAndCatchIO $ loadHashedPassword dbConnection email
+  let passwordCheck = case maybeHashedPassword of
+        Just hashedPassword -> Just $ checkPassword (mkPassword password) (PasswordHash hashedPassword)
+        Nothing -> Nothing
 
-  let loggedIn = case listToMaybe passwords of
-        (Just (PasswordRow correctPassword)) -> password == correctPassword
-        Nothing -> False
-
-  let errorMessage =
-        if loggedIn
-          then Nothing
-          else Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."
-
-  if loggedIn
-    then redirect "/dashboard"
-    else status unauthorized401
+  errorMessage <- case passwordCheck of
+    Just PasswordCheckSuccess -> do
+      redirect "/dashboard"
+      pure Nothing
+    _ -> do
+      status unauthorized401
+      pure $ Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."
 
   html $ renderHtml $ renderPage environment Page{..}
 
-newtype PasswordRow = PasswordRow Text deriving (Show)
+loadHashedPassword :: Connection -> Text -> IO (Maybe Text)
+loadHashedPassword connection email = do
+  query
+    connection
+    (Query "select users.hashed_password from users where users.email = ?")
+    (Only email)
+    <&> listToMaybe
 
-instance FromRow PasswordRow where
-  fromRow = PasswordRow <$> field
+instance FromRow Text where
+  fromRow = field
 
 newtype Page = Page {errorMessage :: Maybe Text}
 

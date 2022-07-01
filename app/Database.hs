@@ -1,6 +1,9 @@
 module Database where
 
-import Database.SQLite.Simple (Connection, open)
+import Database.SQLite.Simple (
+  Connection,
+  open,
+ )
 import Protolude
 
 openConnection :: IO Connection
