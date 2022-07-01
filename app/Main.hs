@@ -1,5 +1,6 @@
 module Main where
 
+import qualified Database.SQLite.Simple as SQLite
 import Layout
 import qualified Login
 import qualified Network.Wai as Wai
@@ -14,22 +15,27 @@ import Types
 import qualified Web.Scotty as Scotty
 
 main :: IO ()
-main = webApp Production >>= Handler.Warp.runSettings warpSettings
+main = do
+  dbConnection <- SQLite.open "db/data/development.sqlite3"
+  let appContext = AppContext{environment = Production, ..}
+  webApp appContext >>= Handler.Warp.runSettings warpSettings
 
 mainDevelopment :: IO ()
-mainDevelopment =
-  webApp Development
+mainDevelopment = do
+  dbConnection <- SQLite.open "db/data/development.sqlite3"
+  let appContext = AppContext{environment = Development, ..}
+  webApp appContext
     >>= Handler.Warp.runSettings warpSettings . withHotReload
 
-webApp :: Environment -> IO Wai.Application
-webApp environment =
+webApp :: AppContext -> IO Wai.Application
+webApp appContext@(AppContext{..}) =
   Static.staticPolicy (Static.addBase "static/")
     `fmap` Scotty.scottyApp
       ( do
           Scotty.middleware $ Gzip.gzip $ Gzip.def{Gzip.gzipFiles = Gzip.GzipCompress}
           Scotty.get "/" $ Scotty.redirect Login.newPath
-          Scotty.get Login.newPath $ Login.new environment
-          Scotty.post Login.path $ Login.create environment
+          Scotty.get Login.newPath $ Login.new appContext
+          Scotty.post Login.path $ Login.create appContext
           Scotty.get "hot_reload" $ Scotty.html $ Renderer.Text.renderHtml $ Layout.render environment ""
       )
 

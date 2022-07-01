@@ -1,8 +1,7 @@
 -- migrate:up
 create table users (
   id text primary key,
-  created_at date not null,
-  updated_at date not null,
+  created_at datetime not null default (datetime('now')),
   email text not null unique,
   hashed_password text not null
 );

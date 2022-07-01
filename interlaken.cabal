@@ -42,6 +42,7 @@ executable interlaken
     , http-types
     , protolude
     , scotty
+    , sqlite-simple
     , text
     , wai
     , wai-extra

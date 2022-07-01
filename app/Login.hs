@@ -1,5 +1,6 @@
 module Login where
 
+import qualified Database.SQLite.Simple as SQLite
 import qualified Layout
 import Network.HTTP.Types (unauthorized401)
 import Protolude
@@ -16,15 +17,41 @@ path = "/logins"
 newPath :: IsString a => a
 newPath = "/logins/new"
 
-new :: Environment -> Scotty.ActionM ()
-new environment = Scotty.html $ Renderer.Text.renderHtml $ renderPage environment Page{errorMessage = Nothing}
+new :: AppContext -> Scotty.ActionM ()
+new (AppContext{..}) =
+  Scotty.html $
+    Renderer.Text.renderHtml $
+      renderPage environment Page{errorMessage = Nothing}
 
-create :: Environment -> Scotty.ActionM ()
-create environment = do
+create :: AppContext -> Scotty.ActionM ()
+create (AppContext{..}) = do
+  email :: Text <- Scotty.param "email"
+  password :: Text <- Scotty.param "password"
+
+  passwords <- Scotty.liftAndCatchIO $ do
+    SQLite.query dbConnection (SQLite.Query "select users.hashed_password from users where users.email = ?") (SQLite.Only email) :: IO [PasswordRow]
+
+  let loggedIn = case listToMaybe passwords of
+        (Just (PasswordRow correctPassword)) -> password == correctPassword
+        Nothing -> False
+
+  let errorMessage =
+        if loggedIn
+          then Nothing
+          else Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."
+
+  if loggedIn
+    then Scotty.redirect "/dashboard"
+    else Scotty.status unauthorized401
+
   Scotty.html $
     Renderer.Text.renderHtml $ do
-      renderPage environment Page{errorMessage = Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."}
-  Scotty.status unauthorized401
+      renderPage environment Page{..}
+
+newtype PasswordRow = PasswordRow Text deriving (Show)
+
+instance SQLite.FromRow PasswordRow where
+  fromRow = PasswordRow <$> SQLite.field
 
 newtype Page = Page {errorMessage :: Maybe Text}
 
@@ -44,10 +71,10 @@ renderPage environment page = Layout.render environment $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Log in to your account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"
-                  H.input ! A.class_ "input" ! A.type_ "email" ! A.placeholder "e.g. alex@example.com"
+                  H.input ! A.class_ "input" ! A.name "email" ! A.type_ "email" ! A.placeholder "e.g. alex@example.com"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Password"
-                  H.input ! A.class_ "input" ! A.type_ "password" ! A.placeholder "**********"
+                  H.input ! A.class_ "input" ! A.name "password" ! A.type_ "password" ! A.placeholder "**********"
                 H.div ! A.class_ "columns is-vcentered mt-4" $ do
                   H.p ! A.class_ "column is-2" $ do
                     H.button ! A.class_ "button is-primary" ! A.type_ "submit" $ "Log In"
@@ -56,5 +83,6 @@ renderPage environment page = Layout.render environment $ do
 
 renderErrorMessage :: Page -> H.Html
 renderErrorMessage Page{errorMessage = Just message} =
-  H.div ! A.class_ "notification is-danger is-light mt-6 animate__animated animate__fadeIn" $ H.toHtml message
+  H.div ! A.class_ "notification is-danger is-light mt-6 animate__animated animate__fadeIn" $
+    H.toHtml message
 renderErrorMessage Page{errorMessage = Nothing} = ""
