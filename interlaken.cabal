@@ -33,6 +33,7 @@ executable interlaken
   default-extensions:
     NoImplicitPrelude
     OverloadedStrings
+    RecordWildCards
     ScopedTypeVariables
 
   build-depends:
