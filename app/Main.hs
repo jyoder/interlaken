@@ -4,6 +4,7 @@
 
 module Main where
 
+import Layout
 import qualified Login
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Handler.Warp
@@ -30,7 +31,10 @@ webApp environment =
     `fmap` Scotty.scottyApp
       ( do
           Scotty.middleware $ Gzip.gzip $ Gzip.def{Gzip.gzipFiles = Gzip.GzipCompress}
-          Scotty.get "/" $ Login.new environment
+          Scotty.get "/" $ Scotty.redirect Login.newPath
+          Scotty.get Login.newPath $ Login.new environment
+          Scotty.post Login.path $ Login.create environment
+          Scotty.get "hot_reload" $ Scotty.html $ Renderer.Text.renderHtml $ Layout.render environment ""
       )
 
 warpSettings :: Handler.Warp.Settings

@@ -1,7 +1,8 @@
 function startHotReloadMonitor() {
   const host = window.location.host;
-  const webSocketUrl = `ws://${host}`;
-  const pollUrl = `http://${host}`;
+  console.log(window.location.host);
+  const webSocketUrl = `ws://${host}/hot_reload`;
+  const pollUrl = `http://${host}/hot_reload`;
   const pollDelay = 0.1;
 
   let status = "initialized";

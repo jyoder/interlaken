@@ -39,13 +39,14 @@ title Development = H.title "App (Development)"
 links :: H.Html
 links = do
   H.link ! A.rel "stylesheet" ! A.href "https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+  H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
 
 scripts :: Environment -> H.Html
 scripts = hotReload
 
 hotReload :: Environment -> H.Html
 hotReload Production = H.script ""
-hotReload Development = H.script ! A.type_ "text/javascript" ! A.src "development/hot-reload.js" $ ""
+hotReload Development = H.script ! A.type_ "text/javascript" ! A.src "/development/hot-reload.js" $ ""
 
 startHotReload :: Environment -> H.Html
 startHotReload Production = H.script ""

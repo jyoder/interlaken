@@ -37,6 +37,7 @@ executable interlaken
   build-depends:
     , base                   ^>=4.15.1.0
     , blaze-html
+    , http-types
     , protolude
     , scotty
     , text
