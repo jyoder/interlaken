@@ -16,6 +16,7 @@ let
   devTools = with pkgs; [
     cabal-install
     dbmate
+    haskellPackages.cabal-fmt
     haskellPackages.ghcid
     haskellPackages.haskell-language-server
     sqlite
