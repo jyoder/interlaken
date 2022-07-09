@@ -38,7 +38,10 @@ links = do
   H.link ! A.rel "stylesheet" ! A.href "https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
 
 scripts :: Environment -> H.Html
-scripts = hotReload
+scripts environment = do
+  hotReload environment
+  H.script ! A.defer "defer" ! A.src "https://use.fontawesome.com/releases/v5.3.1/js/all.js" $ ""
+  H.script ! A.src "https://unpkg.com/htmx.org@1.7.0" ! H.customAttribute "integrity" "sha384-EzBXYPt0/T6gxNp0nuPtLkmRpmDBbjg6WmCUZRLXBBwYYmwAUxzlSGej0ARHX0Bo" ! H.customAttribute "crossorigin" "anonymous" $ ""
 
 hotReload :: Environment -> H.Html
 hotReload Production = H.script ""

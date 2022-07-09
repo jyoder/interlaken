@@ -25,12 +25,14 @@ extra-source-files:
 
 executable interlaken
   main-is:            Main.hs
+  ghc-options:        -Wall
   other-modules:
     Database
     Development
     Layout
     Login
     Route
+    SignUp
     Types
 
   default-extensions:

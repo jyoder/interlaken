@@ -2,8 +2,6 @@ module Main where
 
 import Database (openConnection)
 import Development (withHotReload)
-import qualified Layout
-import qualified Login
 import Network.Wai (Application)
 import Network.Wai.Handler.Warp (
   Settings,
@@ -20,7 +18,6 @@ import Network.Wai.Middleware.Gzip (
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import Protolude
 import qualified Route
-import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Types (
   AppContext (..),
   Environment (..),
