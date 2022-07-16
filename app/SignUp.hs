@@ -44,11 +44,11 @@ data RuleFeedback
   | Unfulfilled
   deriving (Eq)
 
-manyPath :: IsString a => a
-manyPath = "/sign_ups"
-
 newPath :: IsString a => a
 newPath = "/sign_ups/new"
+
+createPath :: IsString a => a
+createPath = "/sign_ups"
 
 validatePasswordPath :: IsString a => a
 validatePasswordPath = "/sign_ups/validate_password"
@@ -165,7 +165,7 @@ renderPage environment (Page{..}) = Layout.render environment $ do
                   H.h1 ! A.class_ "is-size-2 has-text-weight-light" $ "Interlaken"
                   H.div ! A.class_ "notification is-info is-light mt-6 animate__animated animate__fadeIn" $
                     "There are no users in the system. To create the first administrator account, please provide an email address and password for the new account."
-              H.form ! A.action manyPath ! A.method "post" $ do
+              H.form ! A.action createPath ! A.method "post" $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Create an administrator account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"

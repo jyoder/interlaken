@@ -33,8 +33,8 @@ import Web.Scotty (
   status,
  )
 
-manyPath :: IsString a => a
-manyPath = "/logins"
+createPath :: IsString a => a
+createPath = "/logins"
 
 newPath :: IsString a => a
 newPath = "/logins/new"
@@ -105,7 +105,7 @@ renderPage environment page = Layout.render environment $ do
                 H.div ! A.class_ "column has-text-centered" $ do
                   H.h1 ! A.class_ "is-size-2 has-text-weight-light" $ "Interlaken"
                   renderErrorMessage page
-              H.form ! A.action manyPath ! A.method "post" $ do
+              H.form ! A.action createPath ! A.method "post" $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Log in to your account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"
