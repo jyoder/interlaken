@@ -1,6 +1,7 @@
 module ParserSpec where
 
 import qualified Data.Set as Set
+import Email (EmailAddress (EmailAddress))
 import Parser (emailAddress)
 import Protolude
 import Test.Hspec (Spec, describe, it, shouldBe)
@@ -10,61 +11,61 @@ spec :: Spec
 spec = do
   describe "emailParser" $ do
     it "parses a simple email" $ do
-      parse emailAddress "" "simple@example.com" `shouldBe` Right "simple@example.com"
+      parse emailAddress "" "simple@example.com" `shouldBe` Right (EmailAddress "simple" "example.com")
 
     it "parses a very common email" $ do
-      parse emailAddress "" "very.common@example.com" `shouldBe` Right "very.common@example.com"
+      parse emailAddress "" "very.common@example.com" `shouldBe` Right (EmailAddress "very.common" "example.com")
 
     it "parses a more complex email" $ do
-      parse emailAddress "" "disposable.style.email.with+symbol@example.com" `shouldBe` Right "disposable.style.email.with+symbol@example.com"
+      parse emailAddress "" "disposable.style.email.with+symbol@example.com" `shouldBe` Right (EmailAddress "disposable.style.email.with+symbol" "example.com")
 
     it "parses an email with a hyphen" $ do
-      parse emailAddress "" "other.email-with-hyphen@example.com" `shouldBe` Right "other.email-with-hyphen@example.com"
+      parse emailAddress "" "other.email-with-hyphen@example.com" `shouldBe` Right (EmailAddress "other.email-with-hyphen" "example.com")
 
     it "parses an email with multiple hyphens" $ do
-      parse emailAddress "" "fully-qualified-domain@example.com" `shouldBe` Right "fully-qualified-domain@example.com"
+      parse emailAddress "" "fully-qualified-domain@example.com" `shouldBe` Right (EmailAddress "fully-qualified-domain" "example.com")
 
     it "parses an email with tags" $ do
-      parse emailAddress "" "user.name+tag+sorting@example.com" `shouldBe` Right "user.name+tag+sorting@example.com"
+      parse emailAddress "" "user.name+tag+sorting@example.com" `shouldBe` Right (EmailAddress "user.name+tag+sorting" "example.com")
 
     it "parses an email with a one letter local part" $ do
-      parse emailAddress "" "x@example.com" `shouldBe` Right "x@example.com"
+      parse emailAddress "" "x@example.com" `shouldBe` Right (EmailAddress "x" "example.com")
 
     it "parses a strange email" $ do
-      parse emailAddress "" "example-indeed@strange-example.com" `shouldBe` Right "example-indeed@strange-example.com"
+      parse emailAddress "" "example-indeed@strange-example.com" `shouldBe` Right (EmailAddress "example-indeed" "strange-example.com")
 
     it "parses an email with no top level domain" $ do
-      parse emailAddress "" "admin@mailserver1" `shouldBe` Right "admin@mailserver1"
+      parse emailAddress "" "admin@mailserver1" `shouldBe` Right (EmailAddress "admin" "mailserver1")
 
     it "parses an email with a slash in the local part" $ do
-      parse emailAddress "" "test/test@test.com" `shouldBe` Right "test/test@test.com"
+      parse emailAddress "" "test/test@test.com" `shouldBe` Right (EmailAddress "test/test" "test.com")
 
     it "parses a bangified host route" $ do
-      parse emailAddress "" "mailhost!username@example.org" `shouldBe` Right "mailhost!username@example.org"
+      parse emailAddress "" "mailhost!username@example.org" `shouldBe` Right (EmailAddress "mailhost!username" "example.org")
 
     it "parses an escaped mail route" $ do
-      parse emailAddress "" "user%example.com@example.org" `shouldBe` Right "user%example.com@example.org"
+      parse emailAddress "" "user%example.com@example.org" `shouldBe` Right (EmailAddress "user%example.com" "example.org")
 
     it "parses an email with a local part ending in a non-alphanumeric character" $ do
-      parse emailAddress "" "user-@example.org" `shouldBe` Right "user-@example.org"
+      parse emailAddress "" "user-@example.org" `shouldBe` Right (EmailAddress "user-" "example.org")
 
     it "parses an email with dots in the local part" $ do
-      parse emailAddress "" "a.b.c@thing.com" `shouldBe` Right "a.b.c@thing.com"
+      parse emailAddress "" "a.b.c@thing.com" `shouldBe` Right (EmailAddress "a.b.c" "thing.com")
 
     it "parses an email with special characters in the local part" $ do
-      parse emailAddress "" "!#$%&'*+-/=?^_`{|}~@thing.com" `shouldBe` Right "!#$%&'*+-/=?^_`{|}~@thing.com"
+      parse emailAddress "" "!#$%&'*+-/=?^_`{|}~@thing.com" `shouldBe` Right (EmailAddress "!#$%&'*+-/=?^_`{|}~" "thing.com")
 
     it "parses an email with special characters in the local part" $ do
-      parse emailAddress "" "!#$%&'*+-/=?^_`{|}~@thing.com" `shouldBe` Right "!#$%&'*+-/=?^_`{|}~@thing.com"
+      parse emailAddress "" "!#$%&'*+-/=?^_`{|}~@thing.com" `shouldBe` Right (EmailAddress "!#$%&'*+-/=?^_`{|}~" "thing.com")
 
     it "parses an email with hyphens in the domain name" $ do
-      parse emailAddress "" "a@b.b-o-m.co-m" `shouldBe` Right "a@b.b-o-m.co-m"
+      parse emailAddress "" "a@b.b-o-m.co-m" `shouldBe` Right (EmailAddress "a" "b.b-o-m.co-m")
 
     it "parses an email which is a subset of a larger invalid email string due to multiple @ character" $ do
-      parse emailAddress "" "a@b@c@d.com" `shouldBe` Right "a@b"
+      parse emailAddress "" "a@b@c@d.com" `shouldBe` Right (EmailAddress "a" "b")
 
     it "parses an email which is a subset of a larger invalid email string due to an _ character" $ do
-      parse emailAddress "" "hello@worl_d.com" `shouldBe` Right "hello@worl"
+      parse emailAddress "" "hello@worl_d.com" `shouldBe` Right (EmailAddress "hello" "worl")
 
     it "rejects an email whose local part starts with a dot" $ do
       parse emailAddress "" ".a.b.c@thing.com"

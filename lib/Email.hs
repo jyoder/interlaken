@@ -6,7 +6,7 @@ data EmailAddress = EmailAddress
   { localPart :: Text
   , domainName :: Text
   }
-  deriving (Ord, Eq)
+  deriving (Show, Ord, Eq)
 
 formatEmailAddress :: EmailAddress -> Text
 formatEmailAddress (EmailAddress{..}) = localPart <> "@" <> domainName
