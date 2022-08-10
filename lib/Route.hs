@@ -5,7 +5,7 @@ import qualified Login
 import Protolude
 import qualified SignUp
 import Types (AppContext)
-import Web.Scotty as Scotty
+import qualified Web.Scotty as Scotty
 
 routes :: AppContext -> Scotty.ScottyM ()
 routes appContext = do

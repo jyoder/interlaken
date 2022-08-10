@@ -9,7 +9,11 @@ import Database.SQLite.Simple (
   query_,
  )
 import qualified Layout
-import Parser
+import Parser (
+  emailAddress,
+  formatEmailAddressFeedback,
+  parseRequiredFormInput,
+ )
 import Protolude hiding (elem, find, length)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Html5 (textValue, toHtml, (!))

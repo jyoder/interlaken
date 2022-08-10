@@ -75,7 +75,7 @@ create (AppContext{..}) = do
       pure Nothing
     _ -> do
       status unauthorized401
-      pure $ Just "Either the email or the password do not match our records. Please check whether your caps-lock  key is on and try again."
+      pure $ Just "Either the email or the password do not match our records. Please check whether your caps-lock key is on and try again."
 
   html $ renderHtml $ renderPage environment Page{..}
 
