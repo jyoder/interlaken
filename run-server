@@ -1,0 +1,1 @@
+ghcid --command="cabal new-repl lib" --test=Server.runDevelopment --restart=lib --restart=static --restart=app

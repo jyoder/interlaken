@@ -1,0 +1,1 @@
+ghcid --command="cabal new-repl test" --test=main --restart=lib --restart=test --restart=app

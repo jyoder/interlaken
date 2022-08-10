@@ -1,6 +1,6 @@
 module SignUp where
 
-import Data.Text (find, length)
+import Data.Text (elem, find, length)
 import Database.SQLite.Simple (
   Connection,
   FromRow (..),
@@ -9,7 +9,8 @@ import Database.SQLite.Simple (
   query_,
  )
 import qualified Layout
-import Protolude hiding (find, length)
+import Parser
+import Protolude hiding (elem, find, length)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Html5 (textValue, toHtml, (!))
 import qualified Text.Blaze.Html5 as H
@@ -23,7 +24,9 @@ import Web.Scotty (
  )
 
 data Page = Page
-  { password :: Text
+  { email :: Text
+  , maybeEmailFeedback :: Maybe Text
+  , password :: Text
   , maybePasswordFeedbackSummary :: Maybe Text
   , passwordFeedback :: PasswordFeedback
   }
@@ -58,37 +61,52 @@ new AppContext{..} = do
   maybeUserCount <- liftAndCatchIO $ userCount dbConnection
   case maybeUserCount of
     Just (UserCount 0) -> do
-      html $ renderHtml $ renderPage environment $ makePage Nothing
+      html $ renderHtml $ renderPage environment makeEmptyPage
     _ -> pure ()
 
 create :: AppContext -> ActionM ()
 create AppContext{..} = do
+  email1 :: Text <- param "email"
   password :: Text <- param "password"
 
   if isValidPassword password
-    then pure ()
-    else html $ renderHtml $ renderPage environment $ makePage $ Just password
+    then do
+      maybeUserCount <- liftAndCatchIO $ userCount dbConnection
+      case maybeUserCount of
+        Just (UserCount 0) -> do
+          html $ renderHtml $ renderPage environment makeEmptyPage
+        _ -> pure ()
+    else html $ renderHtml $ renderPage environment $ makePage email1 password
 
 validatePassword :: AppContext -> ActionM ()
 validatePassword AppContext{} = do
   password :: Text <- param "password"
   html $ renderHtml $ renderPasswordRequirements $ makePasswordFeedback password
 
-makePage :: Maybe Text -> Page
-makePage maybePassword =
-  case maybePassword of
-    Just password ->
-      Page
-        { maybePasswordFeedbackSummary = makePasswordFeedbackSummary password
-        , passwordFeedback = makePasswordFeedback password
-        , ..
-        }
-    Nothing ->
-      Page
-        { password = ""
-        , maybePasswordFeedbackSummary = Nothing
-        , passwordFeedback = undeterminedPasswordFeedback
-        }
+makeEmptyPage :: Page
+makeEmptyPage =
+  Page
+    { email = ""
+    , maybeEmailFeedback = Nothing
+    , password = ""
+    , maybePasswordFeedbackSummary = Nothing
+    , passwordFeedback = undeterminedPasswordFeedback
+    }
+
+makePage :: Text -> Text -> Page
+makePage email password =
+  Page
+    { maybeEmailFeedback = makeEmailFeedback email
+    , maybePasswordFeedbackSummary = makePasswordFeedbackSummary password
+    , passwordFeedback = makePasswordFeedback password
+    , ..
+    }
+
+makeEmailFeedback :: Text -> Maybe Text
+makeEmailFeedback email = do
+  case parseRequiredFormInput emailAddress formatEmailAddressFeedback email of
+    Left errorMessage -> Just errorMessage
+    Right _ -> Nothing
 
 makePasswordFeedbackSummary :: Text -> Maybe Text
 makePasswordFeedbackSummary password =
@@ -169,7 +187,7 @@ renderPage environment (Page{..}) = Layout.render environment $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Create an administrator account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"
-                  H.input ! A.class_ "input" ! A.name "email" ! A.type_ "email" ! A.placeholder "e.g. alex@example.com"
+                  renderEmailInput email maybeEmailFeedback
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Password"
                   renderPasswordInput password maybePasswordFeedbackSummary
@@ -199,6 +217,20 @@ renderPasswordInput password maybePasswordFeedbackSummary = do
   class_ = if isJust maybePasswordFeedbackSummary then "input is-danger" else "input"
   renderPasswordInputFeedbackSummary =
     maybe "" ((H.p ! A.class_ "help is-danger") . H.toHtml) maybePasswordFeedbackSummary
+
+renderEmailInput :: Text -> Maybe Text -> H.Html
+renderEmailInput email maybeEmailFeedback = do
+  H.input
+    ! A.class_ class_
+    ! A.name "email"
+    ! A.type_ "FIXME"
+    ! A.value (textValue email)
+    ! A.placeholder "e.g. alex@example.com"
+  renderEmailInputFeedback
+ where
+  class_ = if isJust maybeEmailFeedback then "input is-danger" else "input"
+  renderEmailInputFeedback =
+    maybe "" ((H.p ! A.class_ "help is-danger") . H.toHtml) maybeEmailFeedback
 
 renderPasswordRequirements :: PasswordFeedback -> H.Html
 renderPasswordRequirements PasswordFeedback{..} =
@@ -245,38 +277,5 @@ minimumPasswordLength = 12
 maximumPasswordLength :: Int
 maximumPasswordLength = 50
 
-specialCharacters :: [Char]
-specialCharacters =
-  [ '`'
-  , '~'
-  , '!'
-  , '@'
-  , '#'
-  , '$'
-  , '%'
-  , '^'
-  , '&'
-  , '*'
-  , '('
-  , ')'
-  , '-'
-  , '_'
-  , '+'
-  , '='
-  , '['
-  , '{'
-  , ']'
-  , '}'
-  , '\\'
-  , '|'
-  , ';'
-  , ':'
-  , '\''
-  , '"'
-  , ','
-  , '<'
-  , '.'
-  , '>'
-  , '/'
-  , '?'
-  ]
+specialCharacters :: Text
+specialCharacters = "`~!@#$%^&*()-_+=[{]}\\|;:'\",<.>/?"

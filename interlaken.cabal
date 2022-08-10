@@ -23,15 +23,17 @@ extra-source-files:
   CHANGELOG.md
   README.md
 
-executable interlaken
-  main-is:            Main.hs
+library lib
   ghc-options:        -Wall
-  other-modules:
+  exposed-modules:
     Database
     Development
+    Email
     Layout
     Login
+    Parser
     Route
+    Server
     SignUp
     Types
 
@@ -45,6 +47,7 @@ executable interlaken
     , base                   ^>=4.15.1.0
     , blaze-html
     , http-types
+    , megaparsec
     , password
     , password-types
     , protolude
@@ -58,5 +61,48 @@ executable interlaken
     , warp
     , websockets
 
+  hs-source-dirs:     lib
+  default-language:   Haskell2010
+
+executable interlaken
+  main-is:            Main.hs
+  ghc-options:        -Wall
+  default-extensions:
+    NoImplicitPrelude
+    OverloadedStrings
+    RecordWildCards
+    ScopedTypeVariables
+
+  build-depends:
+    , lib
+    , protolude
+
   hs-source-dirs:     app
+  default-language:   Haskell2010
+
+test-suite test
+  type:               exitcode-stdio-1.0
+  hs-source-dirs:     test
+  main-is:            Main.hs
+  ghc-options:        -Wall
+  default-extensions:
+    NoImplicitPrelude
+    OverloadedStrings
+    RecordWildCards
+    ScopedTypeVariables
+
+  other-modules:
+    ParserSpec
+    Spec
+
+  build-depends:
+    , base
+    , containers
+    , hspec
+    , hspec-discover
+    , lib
+    , megaparsec
+    , protolude
+    , text
+
   default-language:   Haskell2010

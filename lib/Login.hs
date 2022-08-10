@@ -16,6 +16,7 @@ import Database.SQLite.Simple (
   query_,
  )
 import qualified Layout
+
 import Network.HTTP.Types (unauthorized401)
 import Protolude
 import qualified SignUp

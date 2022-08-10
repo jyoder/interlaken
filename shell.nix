@@ -19,6 +19,7 @@ let
     haskellPackages.cabal-fmt
     haskellPackages.ghcid
     haskellPackages.haskell-language-server
+    haskellPackages.hspec-discover
     sqlite
   ];
 
