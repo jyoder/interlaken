@@ -16,9 +16,6 @@ import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Types
 import Web.Scotty (ActionM, html)
 
-hotReloadPingPath :: IsString a => a
-hotReloadPingPath = "/hot_reload"
-
 hotReloadPing :: AppContext -> ActionM ()
 hotReloadPing (AppContext{..}) = html $ renderHtml $ Layout.render environment ""
 

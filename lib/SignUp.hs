@@ -4,8 +4,10 @@ import Data.Text (elem, find, length)
 import Database.SQLite.Simple (
   Connection,
   FromRow (..),
+  Only (Only),
   Query (Query),
   field,
+  query,
   query_,
  )
 import qualified Layout
@@ -14,6 +16,7 @@ import Parser (
   formatEmailAddressFeedback,
   parseRequiredFormInput,
  )
+import qualified Path
 import Protolude hiding (elem, find, length)
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Html5 (textValue, toHtml, (!))
@@ -25,9 +28,10 @@ import Web.Scotty (
   html,
   liftAndCatchIO,
   param,
+  redirect,
  )
 
-data Page = Page
+data NewPage = NewPage
   { email :: Text
   , maybeEmailFeedback :: Maybe Text
   , password :: Text
@@ -51,55 +55,46 @@ data RuleFeedback
   | Unfulfilled
   deriving (Eq)
 
-newPath :: IsString a => a
-newPath = "/sign_ups/new"
-
-createPath :: IsString a => a
-createPath = "/sign_ups"
-
-validatePasswordPath :: IsString a => a
-validatePasswordPath = "/sign_ups/validate_password"
-
 new :: AppContext -> ActionM ()
-new AppContext{..} = do
-  maybeUserCount <- liftAndCatchIO $ userCount dbConnection
-  case maybeUserCount of
-    Just (UserCount 0) -> do
-      html $ renderHtml $ renderPage environment makeEmptyPage
-    _ -> pure ()
+new AppContext{..} = html $ renderHtml $ renderNewPage environment makeEmptyNewPage
 
 create :: AppContext -> ActionM ()
 create AppContext{..} = do
-  email1 :: Text <- param "email"
-  password :: Text <- param "password"
+  email :: Text <- param emailParam
+  password :: Text <- param passwordParam
 
-  if isValidPassword password
-    then do
-      maybeUserCount <- liftAndCatchIO $ userCount dbConnection
-      case maybeUserCount of
-        Just (UserCount 0) -> do
-          html $ renderHtml $ renderPage environment makeEmptyPage
-        _ -> pure ()
-    else html $ renderHtml $ renderPage environment $ makePage email1 password
+  emailExists' <- liftAndCatchIO $ emailExists dbConnection email
+
+  if emailExists'
+    then redirect Path.loginNew
+    else do
+      creatingAdmin <- liftAndCatchIO $ creatingAdminAccount dbConnection
+      if creatingAdmin
+        then
+          if isValidPassword password
+            then html $ renderHtml $ renderNewPage environment makeEmptyNewPage
+            else html $ renderHtml $ renderNewPage environment $ makePage email password
+        else html $ renderHtml $ renderNewPage environment makeEmptyNewPage
 
 validatePassword :: AppContext -> ActionM ()
 validatePassword AppContext{} = do
-  password :: Text <- param "password"
+  password :: Text <- param passwordParam
   html $ renderHtml $ renderPasswordRequirements $ makePasswordFeedback password
 
-makeEmptyPage :: Page
-makeEmptyPage =
-  Page
+makeEmptyNewPage :: NewPage
+makeEmptyNewPage =
+  NewPage
     { email = ""
     , maybeEmailFeedback = Nothing
     , password = ""
     , maybePasswordFeedbackSummary = Nothing
     , passwordFeedback = undeterminedPasswordFeedback
+    , ..
     }
 
-makePage :: Text -> Text -> Page
+makePage :: Text -> Text -> NewPage
 makePage email password =
-  Page
+  NewPage
     { maybeEmailFeedback = makeEmailFeedback email
     , maybePasswordFeedbackSummary = makePasswordFeedbackSummary password
     , passwordFeedback = makePasswordFeedback password
@@ -174,8 +169,8 @@ isValidPassword password =
         && (number == Fulfilled)
         && (specialCharacter == Fulfilled)
 
-renderPage :: Environment -> Page -> H.Html
-renderPage environment (Page{..}) = Layout.render environment $ do
+renderNewPage :: Environment -> NewPage -> H.Html
+renderNewPage environment (NewPage{..}) = Layout.render environment $ do
   H.section ! A.class_ "hero" $ do
     H.div ! A.class_ "hero-body" $ do
       H.div ! A.class_ "container" $ do
@@ -187,7 +182,7 @@ renderPage environment (Page{..}) = Layout.render environment $ do
                   H.h1 ! A.class_ "is-size-2 has-text-weight-light" $ "Interlaken"
                   H.div ! A.class_ "notification is-info is-light mt-6 animate__animated animate__fadeIn" $
                     "There are no users in the system. To create the first administrator account, please provide an email address and password for the new account."
-              H.form ! A.action createPath ! A.method "post" $ do
+              H.form ! A.action Path.signUpCreate ! A.method "post" $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Create an administrator account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"
@@ -208,14 +203,14 @@ renderPasswordInput :: Text -> Maybe Text -> H.Html
 renderPasswordInput password maybePasswordFeedbackSummary = do
   H.input
     ! A.class_ class_
-    ! A.name "password"
+    ! A.name passwordParam
     ! A.type_ "password"
     ! A.value (textValue password)
-    ! H.customAttribute "hx-post" validatePasswordPath
+    ! H.customAttribute "hx-post" Path.signUpValidatePassword
     ! H.customAttribute "hx-trigger" "input delay:100ms"
     ! H.customAttribute "hx-target" "#password-requirements"
     ! H.customAttribute "hx-swap" "outerHTML"
-    ! A.placeholder "**********"
+    ! A.placeholder "************"
   renderPasswordInputFeedbackSummary
  where
   class_ = if isJust maybePasswordFeedbackSummary then "input is-danger" else "input"
@@ -226,8 +221,7 @@ renderEmailInput :: Text -> Maybe Text -> H.Html
 renderEmailInput email maybeEmailFeedback = do
   H.input
     ! A.class_ class_
-    ! A.name "email"
-    ! A.type_ "FIXME"
+    ! A.name emailParam
     ! A.value (textValue email)
     ! A.placeholder "e.g. alex@example.com"
   renderEmailInputFeedback
@@ -263,17 +257,35 @@ ruleFeedbackIcon Undetermined = ""
 ruleFeedbackIcon Fulfilled = H.span ! A.class_ "icon-text has-text-success mt-1 ml-1" $ H.i ! A.class_ "fas fa-check" $ ""
 ruleFeedbackIcon Unfulfilled = H.span ! A.class_ "icon-text has-text-danger mt-1 ml-1" $ H.i ! A.class_ "fas fa-times" $ ""
 
-userCount :: Connection -> IO (Maybe UserCount)
+emailExists :: Connection -> Text -> IO Bool
+emailExists connection email = do
+  maybeEmailCount <- emailCount connection email
+  pure $ fromMaybe (Count 0) maybeEmailCount /= Count 0
+
+emailCount :: Connection -> Text -> IO (Maybe Count)
+emailCount connection email = do
+  query
+    connection
+    (Query "select count(*) from users where email = ?")
+    (Only email)
+    <&> listToMaybe
+
+creatingAdminAccount :: Connection -> IO Bool
+creatingAdminAccount connection = do
+  maybeUserCount <- userCount connection
+  pure $ fromMaybe (Count 1) maybeUserCount == Count 0
+
+userCount :: Connection -> IO (Maybe Count)
 userCount connection = do
   query_
     connection
     (Query "select count(*) from users")
     <&> listToMaybe
 
-newtype UserCount = UserCount Int
+newtype Count = Count Int deriving (Eq)
 
-instance FromRow UserCount where
-  fromRow = UserCount <$> field
+instance FromRow Count where
+  fromRow = Count <$> field
 
 minimumPasswordLength :: Int
 minimumPasswordLength = 12
@@ -283,3 +295,9 @@ maximumPasswordLength = 50
 
 specialCharacters :: Text
 specialCharacters = "`~!@#$%^&*()-_+=[{]}\\|;:'\",<.>/?"
+
+emailParam :: IsString a => a
+emailParam = "email"
+
+passwordParam :: IsString a => a
+passwordParam = "password"

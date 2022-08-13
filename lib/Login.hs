@@ -18,8 +18,8 @@ import Database.SQLite.Simple (
 import qualified Layout
 
 import Network.HTTP.Types (unauthorized401)
+import qualified Path
 import Protolude
-import qualified SignUp
 import Text.Blaze.Html.Renderer.Text (renderHtml)
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
@@ -44,7 +44,7 @@ new :: AppContext -> ActionM ()
 new (AppContext{..}) = do
   maybeUserCount <- liftAndCatchIO $ userCount dbConnection
   case maybeUserCount of
-    Just (UserCount 0) -> redirect SignUp.newPath
+    Just (UserCount 0) -> redirect Path.signUpNew
     _ -> html $ renderHtml $ renderPage environment Page{errorMessage = Nothing}
 
 userCount :: Connection -> IO (Maybe UserCount)
