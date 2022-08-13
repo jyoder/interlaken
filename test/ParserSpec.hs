@@ -4,7 +4,9 @@ import qualified Data.Set as Set
 import Email (EmailAddress (EmailAddress))
 import Parser (
   emailAddress,
+  formatDefaultFeedback,
   formatEmailAddressFeedback,
+  parseOptionalFormInput,
   parseRequiredFormInput,
  )
 import Protolude
@@ -15,9 +17,40 @@ import Test.Hspec (
   shouldBe,
  )
 import Text.Megaparsec
+import Text.Megaparsec.Char (string)
 
 spec :: Spec
 spec = do
+  describe "parseRequiredFormInput" $ do
+    it "returns an error message for the empty string" $ do
+      parseRequiredFormInput (string "dummy") (formatDefaultFeedback "") ""
+        `shouldBe` Left "can't be blank"
+
+    it "returns an error message for an input with only whitespace" $ do
+      parseRequiredFormInput (string "dummy") (formatDefaultFeedback "") "      "
+        `shouldBe` Left "can't be blank"
+      parseRequiredFormInput (string "dummy") (formatDefaultFeedback "") "     \n "
+        `shouldBe` Left "can't be blank"
+
+    it "returns a trimmed string for an input with whitespace on either end" $ do
+      parseRequiredFormInput (string "dummy") (formatDefaultFeedback "") "   dummy    "
+        `shouldBe` Right "dummy"
+
+  describe "parseOptionalFormInput" $ do
+    it "returns Nothing for the empty string" $ do
+      parseOptionalFormInput (string "dummy") (formatDefaultFeedback "") ""
+        `shouldBe` Right Nothing
+
+    it "returns Nothing for an input with only whitespace" $ do
+      parseOptionalFormInput (string "dummy") (formatDefaultFeedback "") "      "
+        `shouldBe` Right Nothing
+      parseOptionalFormInput (string "dummy") (formatDefaultFeedback "") "    \n  "
+        `shouldBe` Right Nothing
+
+    it "returns a trimmed string for an input with whitespace on either end" $ do
+      parseOptionalFormInput (string "dummy") (formatDefaultFeedback "") "   dummy   "
+        `shouldBe` Right (Just "dummy")
+
   describe "formatEmailAddressFeedback" $ do
     it "reports email addresses that begin with '@'" $ do
       parseRequiredFormInput emailAddress formatEmailAddressFeedback "@example.com"
