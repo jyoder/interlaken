@@ -32,6 +32,7 @@ library lib
     Layout
     Login
     Parser
+    Path
     Route
     Server
     SignUp
@@ -45,15 +46,16 @@ library lib
 
   build-depends:
     , base                   ^>=4.15.1.0
+    , bcrypt
     , blaze-html
     , http-types
     , megaparsec
-    , password
-    , password-types
     , protolude
     , scotty
     , sqlite-simple
+    , string-conversions
     , text
+    , uuid
     , wai
     , wai-extra
     , wai-middleware-static

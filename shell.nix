@@ -20,7 +20,7 @@ let
     haskellPackages.ghcid
     haskellPackages.haskell-language-server
     haskellPackages.hspec-discover
-    sqlite
+    sqlite-interactive
   ];
 
   shellHook = ''

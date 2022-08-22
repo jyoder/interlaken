@@ -1,11 +1,16 @@
 module SignUp where
 
+import Crypto.BCrypt
+import Data.String.Conversions (cs)
 import Data.Text (elem, find, length)
+import Data.UUID (toString)
+import Data.UUID.V4 (nextRandom)
 import Database.SQLite.Simple (
   Connection,
   FromRow (..),
   Only (Only),
   Query (Query),
+  execute,
   field,
   query,
   query_,
@@ -72,7 +77,9 @@ create AppContext{..} = do
       if creatingAdmin
         then
           if isValidPassword password
-            then html $ renderHtml $ renderNewPage environment makeEmptyNewPage
+            then do
+              liftAndCatchIO $ insertAdminUser dbConnection email password
+              html $ renderHtml $ renderNewPage environment makeEmptyNewPage
             else html $ renderHtml $ renderNewPage environment $ makePage email password
         else html $ renderHtml $ renderNewPage environment makeEmptyNewPage
 
@@ -281,6 +288,15 @@ userCount connection = do
     connection
     (Query "select count(*) from users")
     <&> listToMaybe
+
+insertAdminUser :: Connection -> Text -> Text -> IO ()
+insertAdminUser connection email password = do
+  userId <- toString <$> nextRandom
+  hashedPassword <- hashPasswordUsingPolicy slowerBcryptHashingPolicy (cs password)
+  execute
+    connection
+    "insert into users (id, email, hashed_password) values (?, ?, ?)"
+    (userId, email, hashedPassword)
 
 newtype Count = Count Int deriving (Eq)
 

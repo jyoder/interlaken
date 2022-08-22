@@ -1,11 +1,7 @@
 module Login where
 
-import Data.Password.Bcrypt (PasswordCheck (PasswordCheckSuccess), checkPassword)
-import Data.Password.Types (
-  PasswordHash (PasswordHash),
-  mkPassword,
- )
-import Database ()
+import Crypto.BCrypt (validatePassword)
+import Data.String.Conversions (cs)
 import Database.SQLite.Simple (
   Connection,
   FromRow (..),
@@ -16,7 +12,6 @@ import Database.SQLite.Simple (
   query_,
  )
 import qualified Layout
-
 import Network.HTTP.Types (unauthorized401)
 import qualified Path
 import Protolude
@@ -65,17 +60,18 @@ create (AppContext{..}) = do
   password :: Text <- param "password"
 
   maybeHashedPassword <- liftAndCatchIO $ loadHashedPassword dbConnection email
-  let passwordCheck = case maybeHashedPassword of
-        Just (HashedPassword hashedPassword) -> Just $ checkPassword (mkPassword password) (PasswordHash hashedPassword)
-        Nothing -> Nothing
+  let isPasswordValid = case maybeHashedPassword of
+        Just (HashedPassword hashedPassword) -> validatePassword (cs hashedPassword) (cs password)
+        Nothing -> False
 
-  errorMessage <- case passwordCheck of
-    Just PasswordCheckSuccess -> do
-      _ <- redirect "/dashboard"
-      pure Nothing
-    _ -> do
-      status unauthorized401
-      pure $ Just "Either the email or the password do not match our records. Please check whether your caps-lock key is on and try again."
+  errorMessage <-
+    if isPasswordValid
+      then do
+        _ <- redirect "/dashboard"
+        pure Nothing
+      else do
+        status unauthorized401
+        pure $ Just "Either the email or the password do not match our records. Please check whether your caps-lock key is on and try again."
 
   html $ renderHtml $ renderPage environment Page{..}
 
