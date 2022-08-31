@@ -15,6 +15,7 @@ import Network.Wai.Middleware.Gzip (
   def,
   gzip,
  )
+import Network.Wai.Middleware.RequestLogger (logStdoutDev)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import Protolude
 import qualified Route
@@ -42,6 +43,7 @@ webApp appContext =
     `fmap` scottyApp
       ( do
           middleware $ gzip $ def{gzipFiles = GzipCompress}
+          middleware logStdoutDev
           Route.routes appContext
       )
 
