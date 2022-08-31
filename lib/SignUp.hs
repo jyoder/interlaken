@@ -5,13 +5,12 @@ import Data.String.Conversions (cs)
 import Data.Text (elem, find, length)
 import Data.UUID (toString)
 import Data.UUID.V4 (nextRandom)
+import Database (scalar)
 import Database.SQLite.Simple (
   Connection,
-  FromRow (..),
   Only (Only),
   Query (Query),
   execute,
-  field,
   query,
   query_,
  )
@@ -79,7 +78,7 @@ create AppContext{..} = do
           if isValidPassword password
             then do
               liftAndCatchIO $ insertAdminUser dbConnection email password
-              html $ renderHtml $ renderNewPage environment makeEmptyNewPage
+              redirect Path.loginNew
             else html $ renderHtml $ renderNewPage environment $ makePage email password
         else html $ renderHtml $ renderNewPage environment makeEmptyNewPage
 
@@ -267,27 +266,27 @@ ruleFeedbackIcon Unfulfilled = H.span ! A.class_ "icon-text has-text-danger mt-1
 emailExists :: Connection -> Text -> IO Bool
 emailExists connection email = do
   maybeEmailCount <- emailCount connection email
-  pure $ fromMaybe (Count 0) maybeEmailCount /= Count 0
+  pure $ fromMaybe 0 maybeEmailCount /= 0
 
-emailCount :: Connection -> Text -> IO (Maybe Count)
-emailCount connection email = do
+emailCount :: Connection -> Text -> IO (Maybe Int)
+emailCount connection email =
   query
     connection
     (Query "select count(*) from users where email = ?")
     (Only email)
-    <&> listToMaybe
+    <&> scalar
 
 creatingAdminAccount :: Connection -> IO Bool
 creatingAdminAccount connection = do
   maybeUserCount <- userCount connection
-  pure $ fromMaybe (Count 1) maybeUserCount == Count 0
+  pure $ fromMaybe 1 maybeUserCount == 0
 
-userCount :: Connection -> IO (Maybe Count)
+userCount :: Connection -> IO (Maybe Int)
 userCount connection = do
   query_
     connection
     (Query "select count(*) from users")
-    <&> listToMaybe
+    <&> scalar
 
 insertAdminUser :: Connection -> Text -> Text -> IO ()
 insertAdminUser connection email password = do
@@ -297,11 +296,6 @@ insertAdminUser connection email password = do
     connection
     "insert into users (id, email, hashed_password) values (?, ?, ?)"
     (userId, email, hashedPassword)
-
-newtype Count = Count Int deriving (Eq)
-
-instance FromRow Count where
-  fromRow = Count <$> field
 
 minimumPasswordLength :: Int
 minimumPasswordLength = 12

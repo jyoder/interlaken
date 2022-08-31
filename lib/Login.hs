@@ -2,12 +2,11 @@ module Login where
 
 import Crypto.BCrypt (validatePassword)
 import Data.String.Conversions (cs)
+import Database (scalar)
 import Database.SQLite.Simple (
   Connection,
-  FromRow (..),
   Only (Only),
   Query (Query),
-  field,
   query,
   query_,
  )
@@ -29,30 +28,16 @@ import Web.Scotty (
   status,
  )
 
-createPath :: IsString a => a
-createPath = "/logins"
-
-newPath :: IsString a => a
-newPath = "/logins/new"
-
 new :: AppContext -> ActionM ()
 new (AppContext{..}) = do
   maybeUserCount <- liftAndCatchIO $ userCount dbConnection
+  putText $ "on login new page: " <> show maybeUserCount
   case maybeUserCount of
-    Just (UserCount 0) -> redirect Path.signUpNew
+    Just 0 -> redirect Path.signUpNew
     _ -> html $ renderHtml $ renderPage environment Page{errorMessage = Nothing}
 
-userCount :: Connection -> IO (Maybe UserCount)
-userCount connection = do
-  query_
-    connection
-    (Query "select count(*) from users")
-    <&> listToMaybe
-
-newtype UserCount = UserCount Int
-
-instance FromRow UserCount where
-  fromRow = UserCount <$> field
+userCount :: Connection -> IO (Maybe Int)
+userCount connection = query_ connection (Query "select count(*) from users") <&> scalar
 
 create :: AppContext -> ActionM ()
 create (AppContext{..}) = do
@@ -61,7 +46,7 @@ create (AppContext{..}) = do
 
   maybeHashedPassword <- liftAndCatchIO $ loadHashedPassword dbConnection email
   let isPasswordValid = case maybeHashedPassword of
-        Just (HashedPassword hashedPassword) -> validatePassword (cs hashedPassword) (cs password)
+        Just hashedPassword -> validatePassword (cs hashedPassword) (cs password)
         Nothing -> False
 
   errorMessage <-
@@ -75,18 +60,13 @@ create (AppContext{..}) = do
 
   html $ renderHtml $ renderPage environment Page{..}
 
-loadHashedPassword :: Connection -> Text -> IO (Maybe HashedPassword)
-loadHashedPassword connection email = do
+loadHashedPassword :: Connection -> Text -> IO (Maybe Text)
+loadHashedPassword connection email =
   query
     connection
     (Query "select users.hashed_password from users where users.email = ?")
     (Only email)
-    <&> listToMaybe
-
-newtype HashedPassword = HashedPassword Text
-
-instance FromRow HashedPassword where
-  fromRow = HashedPassword <$> field
+    <&> scalar
 
 newtype Page = Page {errorMessage :: Maybe Text}
 
@@ -102,7 +82,7 @@ renderPage environment page = Layout.render environment $ do
                 H.div ! A.class_ "column has-text-centered" $ do
                   H.h1 ! A.class_ "is-size-2 has-text-weight-light" $ "Interlaken"
                   renderErrorMessage page
-              H.form ! A.action createPath ! A.method "post" $ do
+              H.form ! A.action Path.loginCreate ! A.method "post" $ do
                 H.h2 ! A.class_ "is-size-4 has-text-weight-light my-5" $ "Log in to your account"
                 H.div ! A.class_ "field" $ do
                   H.label ! A.class_ "label" $ "Email"
