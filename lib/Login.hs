@@ -30,11 +30,17 @@ import Web.Scotty (
 
 new :: AppContext -> ActionM ()
 new (AppContext{..}) = do
-  maybeUserCount <- liftAndCatchIO $ userCount dbConnection
-  putText $ "on login new page: " <> show maybeUserCount
-  case maybeUserCount of
-    Just 0 -> redirect Path.signUpNew
-    _ -> html $ renderHtml $ renderPage environment Page{errorMessage = Nothing}
+  hasAdminAccount' <- liftAndCatchIO $ hasAdminAccount dbConnection
+  if hasAdminAccount'
+    then html $ renderHtml $ renderPage environment Page{errorMessage = Nothing}
+    else redirect Path.signUpNew
+
+hasAdminAccount :: Connection -> IO Bool
+hasAdminAccount connection = do
+  maybeCount <- userCount connection
+  case maybeCount of
+    Just 0 -> pure False
+    _ -> pure True
 
 userCount :: Connection -> IO (Maybe Int)
 userCount connection = query_ connection (Query "select count(*) from users") <&> scalar
@@ -52,7 +58,7 @@ create (AppContext{..}) = do
   errorMessage <-
     if isPasswordValid
       then do
-        _ <- redirect "/dashboard"
+        _ <- redirect Path.dashboardShow
         pure Nothing
       else do
         status unauthorized401

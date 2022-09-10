@@ -291,11 +291,16 @@ userCount connection = do
 insertAdminUser :: Connection -> Text -> Text -> IO ()
 insertAdminUser connection email password = do
   userId <- toString <$> nextRandom
-  hashedPassword <- hashPasswordUsingPolicy slowerBcryptHashingPolicy (cs password)
+  hashedPassword <- hashPasswordText password
   execute
     connection
     "insert into users (id, email, hashed_password) values (?, ?, ?)"
     (userId, email, hashedPassword)
+
+hashPasswordText :: Text -> IO (Maybe Text)
+hashPasswordText password = do
+  maybeHashedByteString <- hashPasswordUsingPolicy slowerBcryptHashingPolicy (cs password)
+  pure $ cs <$> maybeHashedByteString
 
 minimumPasswordLength :: Int
 minimumPasswordLength = 12

@@ -2,6 +2,9 @@ module Path where
 
 import Protolude
 
+dashboardShow :: IsString a => a
+dashboardShow = "/dashboard"
+
 developmentHotReloadPing :: IsString a => a
 developmentHotReloadPing = "/hot_reload"
 

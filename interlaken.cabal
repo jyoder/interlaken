@@ -26,6 +26,7 @@ extra-source-files:
 library lib
   ghc-options:        -Wall
   exposed-modules:
+    Dashboard
     Database
     Development
     Email
@@ -59,6 +60,7 @@ library lib
     , wai
     , wai-extra
     , wai-middleware-static
+    , wai-session
     , wai-websockets
     , warp
     , websockets
